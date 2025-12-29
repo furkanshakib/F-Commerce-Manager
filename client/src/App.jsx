@@ -14,7 +14,10 @@ const ProtectedRoute = ({ isLoggedIn, children }) => {
 };
 
 function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  // This tells the App to check your "browser memory" when it wakes up
+const [isLoggedIn, setIsLoggedIn] = useState(
+  localStorage.getItem("adminAuth") === "true"
+);
 
   // Check if user was already logged in (so you don't log in every time you refresh)
   useEffect(() => {
