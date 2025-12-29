@@ -10,7 +10,7 @@ function Login({ setIsLoggedIn }) {
     e.preventDefault();
     
     // YOUR SECRET PASSWORD
-    const secretKey = "admin123"; 
+    const secretKey = "taalguss"; 
 
     if (password === secretKey) {
       localStorage.setItem("adminAuth", "true");
