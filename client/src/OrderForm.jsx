@@ -18,7 +18,7 @@ function OrderForm() {
     e.preventDefault();
     try {
       // Send data to our backend
-      await axios.post('http://localhost:5000/api/orders', formData);
+      await axios.post('https://f-commerce-api.onrender.com/api/orders', formData);
       alert('Order Placed Successfully! We will call you soon.');
       setFormData({ customerName: '', phone: '', address: '', products: '', courier: 'Pathao' }); // Reset form
     } catch (error) {
