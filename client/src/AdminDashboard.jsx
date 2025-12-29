@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 
 function AdminDashboard({ setIsLoggedIn }) {
   const [orders, setOrders] = useState([]);
+  const [activeTab, setActiveTab] = useState("Pending"); // <--- Keeps track of which tab is open
   const navigate = useNavigate();
 
   // USE YOUR RENDER LINK HERE
@@ -16,7 +17,6 @@ function AdminDashboard({ setIsLoggedIn }) {
   const fetchOrders = async () => {
     try {
       const response = await axios.get(API_URL);
-      // Sort newest first
       const sortedOrders = response.data.sort((a, b) => new Date(b.date) - new Date(a.date));
       setOrders(sortedOrders);
     } catch (error) {
@@ -27,7 +27,7 @@ function AdminDashboard({ setIsLoggedIn }) {
   const updateStatus = async (id, newStatus) => {
     try {
       await axios.put(`${API_URL}/${id}`, { status: newStatus });
-      fetchOrders(); // Refresh to move the card to the new category
+      fetchOrders(); 
     } catch (error) {
       alert("Failed to update status");
     }
@@ -80,59 +80,89 @@ function AdminDashboard({ setIsLoggedIn }) {
     invoiceWindow.document.close();
   };
 
-  // --- FILTERS ---
-  // If status is "Pending" OR if it has no status (old orders), put it in Pending
+  // --- FILTER LOGIC ---
   const pendingOrders = orders.filter(o => o.status === "Pending" || !o.status);
   const deliveredOrders = orders.filter(o => o.status === "Delivered");
   const receivedOrders = orders.filter(o => o.status === "Received");
 
-  // Reusable Card Component to save space
-  const OrderCard = ({ order }) => (
-    <div className="order-card" style={{ borderLeft: `5px solid ${order.status === 'Delivered' ? '#2563eb' : order.status === 'Received' ? '#16a34a' : '#ca8a04'}` }}>
-      <div className="order-header">
-        <span className="order-id">#{order._id.slice(-6)}</span>
-        <span className="order-date">{new Date(order.date).toLocaleDateString()}</span>
-      </div>
-      <h3>{order.customerName}</h3>
-      <p>📞 {order.phone}</p>
-      <p>📍 {order.address}</p>
-      <p>🛒 <strong>{order.products}</strong></p>
-      
-      <div className="actions" style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
-        {order.status !== "Delivered" && order.status !== "Received" && (
-            <button onClick={() => updateStatus(order._id, "Delivered")} style={{ flex: 1, padding: '8px', background: '#e0f2fe', color: '#0369a1', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Sent to Courier 🚚</button>
-        )}
-        {order.status !== "Received" && (
-          <button onClick={() => updateStatus(order._id, "Received")} style={{ flex: 1, padding: '8px', background: '#dcfce7', color: '#15803d', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Complete ✅</button>
-        )}
-      </div>
-      <button onClick={() => generateInvoice(order)} className="btn-invoice" style={{ marginTop: '10px' }}>Print Invoice</button>
-    </div>
-  );
+  // Determine which list to show based on the active tab
+  const currentList = activeTab === "Pending" ? pendingOrders 
+                    : activeTab === "Delivered" ? deliveredOrders 
+                    : receivedOrders;
+
+  // Style for the tabs
+  const tabStyle = (name, color) => ({
+    padding: '10px 20px',
+    border: 'none',
+    borderBottom: activeTab === name ? `4px solid ${color}` : '4px solid transparent',
+    background: 'transparent',
+    cursor: 'pointer',
+    fontSize: '16px',
+    fontWeight: activeTab === name ? 'bold' : 'normal',
+    color: activeTab === name ? color : '#666',
+    flex: 1
+  });
 
   return (
     <div className="dashboard">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+      {/* HEADER & LOGOUT */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h2>🚀 Manager Dashboard</h2>
-        <button onClick={handleLogout} style={{ background: '#ef4444', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '5px', cursor: 'pointer' }}>Logout</button>
+        <button onClick={handleLogout} style={{ background: '#ef4444', color: 'white', border: 'none', padding: '8px 15px', borderRadius: '5px', cursor: 'pointer' }}>Logout</button>
       </div>
 
-      {/* SECTION 1: PENDING */}
-      <h3 style={{ color: '#ca8a04', borderBottom: '2px solid #ca8a04', paddingBottom: '5px' }}>🟡 Pending Orders ({pendingOrders.length})</h3>
-      <div className="order-list" style={{ marginBottom: '40px' }}>
-        {pendingOrders.length > 0 ? pendingOrders.map(order => <OrderCard key={order._id} order={order} />) : <p>No pending orders.</p>}
+      {/* --- NAVIGATION BAR (TABS) --- */}
+      <div style={{ display: 'flex', borderBottom: '1px solid #ddd', marginBottom: '20px' }}>
+        <button onClick={() => setActiveTab("Pending")} style={tabStyle("Pending", "#ca8a04")}>
+          🟡 Pending ({pendingOrders.length})
+        </button>
+        <button onClick={() => setActiveTab("Delivered")} style={tabStyle("Delivered", "#2563eb")}>
+          🚚 On Delivery ({deliveredOrders.length})
+        </button>
+        <button onClick={() => setActiveTab("Received")} style={tabStyle("Received", "#16a34a")}>
+          ✅ Received ({receivedOrders.length})
+        </button>
       </div>
 
-      {/* SECTION 2: ON DELIVERY */}
-      <h3 style={{ color: '#2563eb', borderBottom: '2px solid #2563eb', paddingBottom: '5px' }}>🚚 On Delivery ({deliveredOrders.length})</h3>
-      <div className="order-list" style={{ marginBottom: '40px' }}>
-        {deliveredOrders.length > 0 ? deliveredOrders.map(order => <OrderCard key={order._id} order={order} />) : <p>No orders in transit.</p>}
-      </div>
-
-      {/* SECTION 3: COMPLETED */}
-      <h3 style={{ color: '#16a34a', borderBottom: '2px solid #16a34a', paddingBottom: '5px' }}>✅ Completed History ({receivedOrders.length})</h3>
+      {/* --- ORDER LIST --- */}
       <div className="order-list">
-        {receivedOrders.length > 0 ? receivedOrders.map(order => <OrderCard key={order._id} order={order} />) : <p>No completed orders yet.</p>}
+        {currentList.length === 0 ? (
+            <p style={{ textAlign: 'center', color: '#888', marginTop: '20px' }}>No orders in this category.</p>
+        ) : (
+          currentList.map(order => (
+            <div key={order._id} className="order-card" style={{ borderLeft: `5px solid ${activeTab === 'Delivered' ? '#2563eb' : activeTab === 'Received' ? '#16a34a' : '#ca8a04'}` }}>
+              
+              <div className="order-header">
+                <span className="order-id">#{order._id.slice(-6)}</span>
+                <span className="order-date">{new Date(order.date).toLocaleDateString()}</span>
+              </div>
+              
+              <h3>{order.customerName}</h3>
+              <p>📞 {order.phone}</p>
+              <p>📍 {order.address}</p>
+              <p>🛒 <strong>{order.products}</strong></p>
+              
+              {/* ACTION BUTTONS */}
+              <div className="actions" style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
+                {activeTab === "Pending" && (
+                   <button onClick={() => updateStatus(order._id, "Delivered")} style={{ flex: 1, padding: '8px', background: '#e0f2fe', color: '#0369a1', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
+                     Mark as Sent 🚚
+                   </button>
+                )}
+                
+                {activeTab === "Delivered" && (
+                  <button onClick={() => updateStatus(order._id, "Received")} style={{ flex: 1, padding: '8px', background: '#dcfce7', color: '#15803d', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
+                    Mark as Done ✅
+                  </button>
+                )}
+              </div>
+
+              <button onClick={() => generateInvoice(order)} className="btn-invoice" style={{ marginTop: '10px' }}>
+                Print Invoice
+              </button>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );
