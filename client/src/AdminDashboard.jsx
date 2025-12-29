@@ -16,7 +16,7 @@ function AdminDashboard({ setIsLoggedIn }) {
   const fetchOrders = async () => {
     try {
       const response = await axios.get(API_URL);
-      // Sort: Newest orders first
+      // Sort newest first
       const sortedOrders = response.data.sort((a, b) => new Date(b.date) - new Date(a.date));
       setOrders(sortedOrders);
     } catch (error) {
@@ -24,11 +24,10 @@ function AdminDashboard({ setIsLoggedIn }) {
     }
   };
 
-  // Function to send the "Change Status" command to the server
   const updateStatus = async (id, newStatus) => {
     try {
       await axios.put(`${API_URL}/${id}`, { status: newStatus });
-      fetchOrders(); // Reload the list to see the new color immediately
+      fetchOrders(); // Refresh to move the card to the new category
     } catch (error) {
       alert("Failed to update status");
     }
@@ -57,19 +56,12 @@ function AdminDashboard({ setIsLoggedIn }) {
             .label { font-weight: bold; width: 100px; }
             .product-box { border: 2px dashed #ccc; padding: 15px; background: #f9f9f9; margin-bottom: 20px; }
             .footer { text-align: center; font-size: 12px; margin-top: 30px; color: #777; border-top: 1px solid #eee; padding-top: 10px; }
-            @media print {
-              body { padding: 0; }
-              .invoice-box { border: none; }
-              .no-print { display: none; }
-            }
+            @media print { .no-print { display: none; } .invoice-box { border: none; } }
           </style>
         </head>
         <body>
           <div class="invoice-box">
-            <div class="header">
-              <h1>F-Commerce Shop</h1>
-              <p>Dhaka, Bangladesh</p>
-            </div>
+            <div class="header"><h1>F-Commerce Shop</h1><p>Dhaka, Bangladesh</p></div>
             <hr style="border: 0; border-top: 1px solid #eee;" />
             <table class="info-table">
               <tr><td class="label">Date:</td><td>${new Date(order.date).toLocaleDateString()}</td></tr>
@@ -77,16 +69,9 @@ function AdminDashboard({ setIsLoggedIn }) {
               <tr><td class="label">Customer:</td><td><strong>${order.customerName}</strong></td></tr>
               <tr><td class="label">Phone:</td><td>${order.phone}</td></tr>
               <tr><td class="label">Address:</td><td>${order.address}</td></tr>
-              ${order.courier ? `<tr><td class="label">Courier:</td><td>${order.courier}</td></tr>` : ''}
             </table>
-            <div class="product-box">
-              <strong>📦 Products:</strong><br/>
-              <p style="font-size: 18px; margin: 5px 0;">${order.products}</p>
-            </div>
-            <div style="text-align: center; margin-top: 40px;">
-              <button class="no-print" onclick="window.print()" style="padding: 10px 20px; background: #2563eb; color: white; border: none; cursor: pointer; border-radius: 5px;">Print Receipt</button>
-            </div>
-            <div class="footer">Thank you for shopping with us!</div>
+            <div class="product-box"><strong>📦 Products:</strong><br/>${order.products}</div>
+            <div style="text-align: center; margin-top: 40px;"><button class="no-print" onclick="window.print()">Print Receipt</button></div>
           </div>
         </body>
       </html>
@@ -95,75 +80,59 @@ function AdminDashboard({ setIsLoggedIn }) {
     invoiceWindow.document.close();
   };
 
-  const getStatusColor = (status) => {
-    if (status === "Delivered") return "#2563eb"; // Blue
-    if (status === "Received") return "#16a34a"; // Green
-    return "#ca8a04"; // Yellow/Gold (Pending)
-  };
+  // --- FILTERS ---
+  // If status is "Pending" OR if it has no status (old orders), put it in Pending
+  const pendingOrders = orders.filter(o => o.status === "Pending" || !o.status);
+  const deliveredOrders = orders.filter(o => o.status === "Delivered");
+  const receivedOrders = orders.filter(o => o.status === "Received");
+
+  // Reusable Card Component to save space
+  const OrderCard = ({ order }) => (
+    <div className="order-card" style={{ borderLeft: `5px solid ${order.status === 'Delivered' ? '#2563eb' : order.status === 'Received' ? '#16a34a' : '#ca8a04'}` }}>
+      <div className="order-header">
+        <span className="order-id">#{order._id.slice(-6)}</span>
+        <span className="order-date">{new Date(order.date).toLocaleDateString()}</span>
+      </div>
+      <h3>{order.customerName}</h3>
+      <p>📞 {order.phone}</p>
+      <p>📍 {order.address}</p>
+      <p>🛒 <strong>{order.products}</strong></p>
+      
+      <div className="actions" style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
+        {order.status !== "Delivered" && order.status !== "Received" && (
+            <button onClick={() => updateStatus(order._id, "Delivered")} style={{ flex: 1, padding: '8px', background: '#e0f2fe', color: '#0369a1', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Sent to Courier 🚚</button>
+        )}
+        {order.status !== "Received" && (
+          <button onClick={() => updateStatus(order._id, "Received")} style={{ flex: 1, padding: '8px', background: '#dcfce7', color: '#15803d', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Complete ✅</button>
+        )}
+      </div>
+      <button onClick={() => generateInvoice(order)} className="btn-invoice" style={{ marginTop: '10px' }}>Print Invoice</button>
+    </div>
+  );
 
   return (
     <div className="dashboard">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h2>🚀 Order Management</h2>
-        <button onClick={handleLogout} style={{ background: '#ef4444', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '5px', cursor: 'pointer' }}>
-          Logout
-        </button>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+        <h2>🚀 Manager Dashboard</h2>
+        <button onClick={handleLogout} style={{ background: '#ef4444', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '5px', cursor: 'pointer' }}>Logout</button>
       </div>
 
+      {/* SECTION 1: PENDING */}
+      <h3 style={{ color: '#ca8a04', borderBottom: '2px solid #ca8a04', paddingBottom: '5px' }}>🟡 Pending Orders ({pendingOrders.length})</h3>
+      <div className="order-list" style={{ marginBottom: '40px' }}>
+        {pendingOrders.length > 0 ? pendingOrders.map(order => <OrderCard key={order._id} order={order} />) : <p>No pending orders.</p>}
+      </div>
+
+      {/* SECTION 2: ON DELIVERY */}
+      <h3 style={{ color: '#2563eb', borderBottom: '2px solid #2563eb', paddingBottom: '5px' }}>🚚 On Delivery ({deliveredOrders.length})</h3>
+      <div className="order-list" style={{ marginBottom: '40px' }}>
+        {deliveredOrders.length > 0 ? deliveredOrders.map(order => <OrderCard key={order._id} order={order} />) : <p>No orders in transit.</p>}
+      </div>
+
+      {/* SECTION 3: COMPLETED */}
+      <h3 style={{ color: '#16a34a', borderBottom: '2px solid #16a34a', paddingBottom: '5px' }}>✅ Completed History ({receivedOrders.length})</h3>
       <div className="order-list">
-        {orders.map(order => (
-          <div key={order._id} className="order-card" style={{ position: 'relative' }}>
-            
-            {/* STATUS BADGE */}
-            <div style={{ 
-              position: 'absolute', 
-              top: '20px', 
-              right: '20px', 
-              background: getStatusColor(order.status), 
-              color: 'white', 
-              padding: '5px 10px', 
-              borderRadius: '20px',
-              fontSize: '12px',
-              fontWeight: 'bold'
-            }}>
-              {order.status || "Pending"}
-            </div>
-
-            <div className="order-header">
-              <span className="order-id">#{order._id.slice(-6)}</span>
-              <span className="order-date">{new Date(order.date).toLocaleDateString()}</span>
-            </div>
-            
-            <h3>{order.customerName}</h3>
-            <p>📞 {order.phone}</p>
-            <p>📍 {order.address}</p>
-            <p>🛒 <strong>{order.products}</strong></p>
-            {order.courier && <p>🚚 <strong>Via: {order.courier}</strong></p>}
-            
-            <div className="actions" style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
-              {/* BUTTONS TO CHANGE STATUS */}
-              {order.status !== "Delivered" && order.status !== "Received" && (
-                 <button 
-                   onClick={() => updateStatus(order._id, "Delivered")} 
-                   style={{ flex: 1, padding: '8px', background: '#e0f2fe', color: '#0369a1', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
-                   Sent to Courier 🚚
-                 </button>
-              )}
-              
-              {order.status !== "Received" && (
-                <button 
-                  onClick={() => updateStatus(order._id, "Received")} 
-                  style={{ flex: 1, padding: '8px', background: '#dcfce7', color: '#15803d', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
-                  Complete ✅
-                </button>
-              )}
-            </div>
-
-            <button onClick={() => generateInvoice(order)} className="btn-invoice" style={{ marginTop: '10px' }}>
-              Print Invoice
-            </button>
-          </div>
-        ))}
+        {receivedOrders.length > 0 ? receivedOrders.map(order => <OrderCard key={order._id} order={order} />) : <p>No completed orders yet.</p>}
       </div>
     </div>
   );
