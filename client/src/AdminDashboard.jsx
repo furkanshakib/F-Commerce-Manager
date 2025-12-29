@@ -25,6 +25,8 @@ function AdminDashboard({ setIsLoggedIn }) {
   };
 
   const updateStatus = async (id, newStatus) => {
+    if (newStatus === "Returned" && !window.confirm("Are you sure this customer returned the product?")) return;
+    
     try {
       await axios.put(`${API_URL}/${id}`, { status: newStatus });
       fetchOrders(); 
@@ -84,25 +86,35 @@ function AdminDashboard({ setIsLoggedIn }) {
   const pendingOrders = orders.filter(o => o.status === "Pending" || !o.status);
   const deliveredOrders = orders.filter(o => o.status === "Delivered");
   const receivedOrders = orders.filter(o => o.status === "Received");
+  const returnedOrders = orders.filter(o => o.status === "Returned"); // <--- NEW FILTER
 
   const currentList = activeTab === "Pending" ? pendingOrders 
                     : activeTab === "Delivered" ? deliveredOrders 
-                    : receivedOrders;
+                    : activeTab === "Received" ? receivedOrders
+                    : returnedOrders; // <--- Handle New Tab
 
-  // --- UPDATED TAB STYLES ---
+  // --- STYLES ---
+  const getBorderColor = () => {
+    if(activeTab === 'Delivered') return '#2563eb'; // Blue
+    if(activeTab === 'Received') return '#16a34a';  // Green
+    if(activeTab === 'Returned') return '#dc2626';  // Red
+    return '#ca8a04'; // Yellow
+  };
+
   const tabStyle = (name, color) => ({
-    padding: '12px 20px',
-    border: '2px solid white', // <--- THE WHITE BORDER
-    borderRadius: '10px',      // <--- Rounded corners
-    marginRight: '10px',       // <--- Space between tabs
-    background: activeTab === name ? 'white' : 'transparent', // White background when active
+    padding: '12px 10px', // Adjusted padding to fit 4 tabs
+    border: '2px solid white',
+    borderRadius: '10px',
+    marginRight: '8px',
+    background: activeTab === name ? 'white' : 'transparent',
     cursor: 'pointer',
-    fontSize: '15px',
+    fontSize: '14px', // Slightly smaller font to fit
     fontWeight: 'bold',
-    color: activeTab === name ? color : '#555', // Colored text when active, gray when not
+    color: activeTab === name ? color : '#555',
     flex: 1,
-    boxShadow: activeTab === name ? '0 2px 5px rgba(0,0,0,0.1)' : 'none', // Subtle shadow for active tab
-    transition: 'all 0.2s ease'
+    boxShadow: activeTab === name ? '0 2px 5px rgba(0,0,0,0.1)' : 'none',
+    transition: 'all 0.2s ease',
+    textAlign: 'center'
   });
 
   return (
@@ -112,13 +124,14 @@ function AdminDashboard({ setIsLoggedIn }) {
         <button onClick={handleLogout} style={{ background: '#ef4444', color: 'white', border: 'none', padding: '8px 15px', borderRadius: '5px', cursor: 'pointer' }}>Logout</button>
       </div>
 
-      {/* --- NAVIGATION BAR WITH GRAY BACKGROUND --- */}
+      {/* --- NAVIGATION BAR --- */}
       <div style={{ 
         display: 'flex', 
-        background: '#f3f4f6', // Light gray background to make white border visible
+        background: '#f3f4f6', 
         padding: '8px', 
         borderRadius: '12px',
-        marginBottom: '20px' 
+        marginBottom: '20px',
+        overflowX: 'auto' // Ensures it scrolls on small phones if needed
       }}>
         <button onClick={() => setActiveTab("Pending")} style={tabStyle("Pending", "#ca8a04")}>
           🟡 Pending ({pendingOrders.length})
@@ -129,6 +142,9 @@ function AdminDashboard({ setIsLoggedIn }) {
         <button onClick={() => setActiveTab("Received")} style={tabStyle("Received", "#16a34a")}>
           ✅ Received ({receivedOrders.length})
         </button>
+        <button onClick={() => setActiveTab("Returned")} style={tabStyle("Returned", "#dc2626")}>
+          ↩️ Returned ({returnedOrders.length})
+        </button>
       </div>
 
       <div className="order-list">
@@ -138,7 +154,7 @@ function AdminDashboard({ setIsLoggedIn }) {
             </div>
         ) : (
           currentList.map(order => (
-            <div key={order._id} className="order-card" style={{ borderLeft: `5px solid ${activeTab === 'Delivered' ? '#2563eb' : activeTab === 'Received' ? '#16a34a' : '#ca8a04'}` }}>
+            <div key={order._id} className="order-card" style={{ borderLeft: `5px solid ${getBorderColor()}` }}>
               
               <div className="order-header">
                 <span className="order-id">#{order._id.slice(-6)}</span>
@@ -150,23 +166,52 @@ function AdminDashboard({ setIsLoggedIn }) {
               <p>📍 {order.address}</p>
               <p>🛒 <strong>{order.products}</strong></p>
               
-              <div className="actions" style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
+              {/* --- ACTION BUTTONS --- */}
+              <div className="actions" style={{ marginTop: '15px' }}>
+                
+                {/* 1. Buttons for Pending Tab */}
                 {activeTab === "Pending" && (
-                   <button onClick={() => updateStatus(order._id, "Delivered")} style={{ flex: 1, padding: '10px', background: '#e0f2fe', color: '#0369a1', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}>
+                   <button onClick={() => updateStatus(order._id, "Delivered")} style={{ width: '100%', padding: '10px', background: '#e0f2fe', color: '#0369a1', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}>
                      Mark as Sent 🚚
                    </button>
                 )}
                 
+                {/* 2. Buttons for Delivered Tab */}
                 {activeTab === "Delivered" && (
-                  <button onClick={() => updateStatus(order._id, "Received")} style={{ flex: 1, padding: '10px', background: '#dcfce7', color: '#15803d', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}>
+                  <button onClick={() => updateStatus(order._id, "Received")} style={{ width: '100%', padding: '10px', background: '#dcfce7', color: '#15803d', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}>
                     Mark as Done ✅
                   </button>
                 )}
-              </div>
 
-              <button onClick={() => generateInvoice(order)} className="btn-invoice" style={{ marginTop: '10px' }}>
-                Print Invoice
-              </button>
+                {/* 3. Buttons for Received Tab (Print Invoice + Return) */}
+                {activeTab === "Received" && (
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <button onClick={() => generateInvoice(order)} className="btn-invoice" style={{ flex: 1, marginTop: '0' }}>
+                      Print Invoice
+                    </button>
+                    <button 
+                      onClick={() => updateStatus(order._id, "Returned")} 
+                      style={{ flex: 1, padding: '10px', background: '#fee2e2', color: '#991b1b', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}>
+                      Customer Returned ↩️
+                    </button>
+                  </div>
+                )}
+
+                 {/* 4. Buttons for Returned Tab (Only Invoice) */}
+                 {activeTab === "Returned" && (
+                  <button onClick={() => generateInvoice(order)} className="btn-invoice" style={{ marginTop: '10px', background: '#ddd', color: '#555' }}>
+                    Print Invoice
+                  </button>
+                )}
+
+                {/* Print Invoice for Pending/Delivered (Outside the flex group) */}
+                {(activeTab === "Pending" || activeTab === "Delivered") && (
+                   <button onClick={() => generateInvoice(order)} className="btn-invoice" style={{ marginTop: '10px' }}>
+                     Print Invoice
+                   </button>
+                )}
+
+              </div>
             </div>
           ))
         )}
