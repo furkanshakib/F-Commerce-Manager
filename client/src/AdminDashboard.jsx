@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 
 function AdminDashboard({ setIsLoggedIn }) {
   const [orders, setOrders] = useState([]);
-  const [activeTab, setActiveTab] = useState("Pending"); // <--- Keeps track of which tab is open
+  const [activeTab, setActiveTab] = useState("Pending");
   const navigate = useNavigate();
 
   // USE YOUR RENDER LINK HERE
@@ -85,49 +85,57 @@ function AdminDashboard({ setIsLoggedIn }) {
   const deliveredOrders = orders.filter(o => o.status === "Delivered");
   const receivedOrders = orders.filter(o => o.status === "Received");
 
-  // Determine which list to show based on the active tab
   const currentList = activeTab === "Pending" ? pendingOrders 
                     : activeTab === "Delivered" ? deliveredOrders 
                     : receivedOrders;
 
-  // Style for the tabs
+  // --- UPDATED TAB STYLES ---
   const tabStyle = (name, color) => ({
-    padding: '10px 20px',
-    border: 'none',
-    borderBottom: activeTab === name ? `4px solid ${color}` : '4px solid transparent',
-    background: 'transparent',
+    padding: '12px 20px',
+    border: '2px solid white', // <--- THE WHITE BORDER
+    borderRadius: '10px',      // <--- Rounded corners
+    marginRight: '10px',       // <--- Space between tabs
+    background: activeTab === name ? 'white' : 'transparent', // White background when active
     cursor: 'pointer',
-    fontSize: '16px',
-    fontWeight: activeTab === name ? 'bold' : 'normal',
-    color: activeTab === name ? color : '#666',
-    flex: 1
+    fontSize: '15px',
+    fontWeight: 'bold',
+    color: activeTab === name ? color : '#555', // Colored text when active, gray when not
+    flex: 1,
+    boxShadow: activeTab === name ? '0 2px 5px rgba(0,0,0,0.1)' : 'none', // Subtle shadow for active tab
+    transition: 'all 0.2s ease'
   });
 
   return (
     <div className="dashboard">
-      {/* HEADER & LOGOUT */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h2>🚀 Manager Dashboard</h2>
         <button onClick={handleLogout} style={{ background: '#ef4444', color: 'white', border: 'none', padding: '8px 15px', borderRadius: '5px', cursor: 'pointer' }}>Logout</button>
       </div>
 
-      {/* --- NAVIGATION BAR (TABS) --- */}
-      <div style={{ display: 'flex', borderBottom: '1px solid #ddd', marginBottom: '20px' }}>
+      {/* --- NAVIGATION BAR WITH GRAY BACKGROUND --- */}
+      <div style={{ 
+        display: 'flex', 
+        background: '#f3f4f6', // Light gray background to make white border visible
+        padding: '8px', 
+        borderRadius: '12px',
+        marginBottom: '20px' 
+      }}>
         <button onClick={() => setActiveTab("Pending")} style={tabStyle("Pending", "#ca8a04")}>
           🟡 Pending ({pendingOrders.length})
         </button>
         <button onClick={() => setActiveTab("Delivered")} style={tabStyle("Delivered", "#2563eb")}>
-          🚚 On Delivery ({deliveredOrders.length})
+          🚚 Delivery ({deliveredOrders.length})
         </button>
         <button onClick={() => setActiveTab("Received")} style={tabStyle("Received", "#16a34a")}>
           ✅ Received ({receivedOrders.length})
         </button>
       </div>
 
-      {/* --- ORDER LIST --- */}
       <div className="order-list">
         {currentList.length === 0 ? (
-            <p style={{ textAlign: 'center', color: '#888', marginTop: '20px' }}>No orders in this category.</p>
+            <div style={{ textAlign: 'center', padding: '40px', color: '#888', background: '#f9fafb', borderRadius: '10px', border: '2px dashed #ddd' }}>
+              No orders in this category.
+            </div>
         ) : (
           currentList.map(order => (
             <div key={order._id} className="order-card" style={{ borderLeft: `5px solid ${activeTab === 'Delivered' ? '#2563eb' : activeTab === 'Received' ? '#16a34a' : '#ca8a04'}` }}>
@@ -142,16 +150,15 @@ function AdminDashboard({ setIsLoggedIn }) {
               <p>📍 {order.address}</p>
               <p>🛒 <strong>{order.products}</strong></p>
               
-              {/* ACTION BUTTONS */}
               <div className="actions" style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
                 {activeTab === "Pending" && (
-                   <button onClick={() => updateStatus(order._id, "Delivered")} style={{ flex: 1, padding: '8px', background: '#e0f2fe', color: '#0369a1', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
+                   <button onClick={() => updateStatus(order._id, "Delivered")} style={{ flex: 1, padding: '10px', background: '#e0f2fe', color: '#0369a1', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}>
                      Mark as Sent 🚚
                    </button>
                 )}
                 
                 {activeTab === "Delivered" && (
-                  <button onClick={() => updateStatus(order._id, "Received")} style={{ flex: 1, padding: '8px', background: '#dcfce7', color: '#15803d', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
+                  <button onClick={() => updateStatus(order._id, "Received")} style={{ flex: 1, padding: '10px', background: '#dcfce7', color: '#15803d', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}>
                     Mark as Done ✅
                   </button>
                 )}
