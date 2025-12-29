@@ -1,3 +1,4 @@
+import logo from './logo.png';
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
@@ -120,7 +121,10 @@ function AdminDashboard({ setIsLoggedIn }) {
   return (
     <div className="dashboard">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h2>🚀 Manager Dashboard</h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+  <img src={logo} alt="Logo" style={{ height: '50px', borderRadius: '50%' }} />
+  <h2>Manager Dashboard</h2>
+</div>
         <button onClick={handleLogout} style={{ background: '#ef4444', color: 'white', border: 'none', padding: '8px 15px', borderRadius: '5px', cursor: 'pointer' }}>Logout</button>
       </div>
 

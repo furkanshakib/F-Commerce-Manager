@@ -1,3 +1,4 @@
+import logo from './logo.png'; // <--- Add this line
 import React, { useState } from 'react';
 import axios from 'axios';
 
@@ -29,6 +30,9 @@ function OrderForm() {
 
   return (
     <div className="card">
+      <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+  <img src={logo} alt="Shop Logo" style={{ maxWidth: '150px', borderRadius: '10px' }} />
+</div>
       <h2>📦 Place Your Order</h2>
       <form onSubmit={handleSubmit}>
         <div className="form-group">
