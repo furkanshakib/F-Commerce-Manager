@@ -53,7 +53,21 @@ app.get('/api/orders', async (req, res) => {
         res.status(500).json(err);
     }
 });
-
+// Update Order Status (Mark as Delivered/Received)
+app.put('/api/orders/:id', async (req, res) => {
+  try {
+    const { status } = req.body;
+    // Find the order by ID and update its status
+    const updatedOrder = await Order.findByIdAndUpdate(
+      req.params.id, 
+      { status: status }, 
+      { new: true } // Return the updated version so the app sees the change
+    );
+    res.json(updatedOrder);
+  } catch (error) {
+    res.status(500).json({ message: "Error updating status" });
+  }
+});
 // 5. Start the Server
 // We only connect to the database if a URL is provided, otherwise just start server
 const MONGO_URI = "mongodb+srv://admin:taalguss@cluster0.r9eb6gd.mongodb.net/?appName=Cluster0";
